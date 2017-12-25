@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<mer>
+	<globalsettings>
+		<jnlpUrl>http://platform.dukascopy.com/demo/jforex.jnlp</jnlpUrl>
+		<userName>DEMO210037KpoPAEU</userName>
+		<password>KpoPA</password>
+		<code>12345</code>
+		<reportfile>report_</reportfile>
+		<instrument>EURUSD</instrument>
+		<initialDeposit>120</initialDeposit>
+		<info>merTesterFX:</info>
+		<pathfile>D:/Development/merAlgoPy/</pathfile> 
+		<csvpathfile>D:/Development/merAlgoPy/</csvpathfile> 
+		<reportpathfile>D:/workspaces/neon/DEV/JForex-3-SDK/logs/</reportpathfile> 
+		<activeDB>false</activeDB>
+		<activeCSV>false</activeCSV>
+		<activeGateway>false</activeGateway>
+	</globalsettings>
+	<strategyparams>
+		<intParam>1</intParam>
+		<doubleParam>0.5</doubleParam>
+		<boolParam>true</boolParam>
+		<textParam>some text</textParam>
+		<file>output.txt</file>
+		<currentTime>default</currentTime>
+		<color>100, 100, 100</color>
+		<instrument>EURUSD</instrument>
+		<period>TEN_SECS</period>
+	</strategyparams>	
+	<iparameters>
+	    <name>ema</name>
+		<amount>0.001</amount>
+		<shift>1</shift>
+		<iperiod>14</iperiod>
+		<slPips>3</slPips>
+		<tpPipsOnLoss>10</tpPipsOnLoss>
+		<tpPipsOnProfit>15</tpPipsOnProfit>
+		<setCalendar>2012, JULY, 17, 14, 30, 00</setCalendar>
+		<mode>BUY</mode> 
+		<enable>true</enable> 
+	</iparameters>		
+</mer>
