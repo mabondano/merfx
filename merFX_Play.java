@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
@@ -48,24 +49,22 @@ import fxOne.merFXFile;
 public class merFX_Play implements IStrategy {
 	
 	final merFXFile ifxXML = new merFXFile();
+	 
+	boolean enableGUI = Boolean.parseBoolean(ifxXML.enableGUI); 
 	
 	private String mPeriod = ifxXML.period;  
 	private String mInstrument = ifxXML.instrument; 
 	private String mSetCalendar = ifxXML.setCalendar;
 	
+	private String name = ifxXML.name;
+	
 	private int iPeriod = Integer.parseInt(ifxXML.iperiod); 
 	private int ishift = Integer.parseInt(ifxXML.shift); 
-	private double amount = Double.parseDouble(ifxXML.amount); 
-	private int sl_factor = Integer.parseInt(ifxXML.tpPipsOnLoss);
-	private int tp_factor = Integer.parseInt(ifxXML.tpPipsOnProfit);
+	public double amount = Double.parseDouble(ifxXML.amount); 
+	public int sl_factor = Integer.parseInt(ifxXML.tpPipsOnLoss);
+	public int tp_factor = Integer.parseInt(ifxXML.tpPipsOnProfit);
 	boolean ienable = Boolean.parseBoolean(ifxXML.enable); 
 
-	//int y = Integer.parseInt(str);
-	//Integer x = Integer.valueOf(str); 
-	//String text = "12.34"; // example String
-	//double value = Double.parseDouble(text);
-	//Boolean boolean1 = Boolean.valueOf("true");
-	//boolean boolean2 = Boolean.parseBoolean("true");
 	/*
 	 * *******************************************************************************
 	 */	
@@ -83,68 +82,39 @@ public class merFX_Play implements IStrategy {
 	private Period period = setPeriod(mPeriod);
 	private Instrument instrument = setInstrument(mInstrument);
 	
+	/*
+	 * *******************************************************************************
+	 */		
 	
-    protected Period setPeriod(String value) {
- 
-       if (value == "TICK"){ period = Period.TICK;
-       
-       } else if (value == "ONE_HOUR"){ period = Period.ONE_HOUR;
-       } else if (value == "ONE_MIN"){ period = Period.ONE_MIN;
-       } else if (value == "ONE_SEC"){ period = Period.ONE_SEC;
-       
-       } else if (value == "TWO_SECS"){ period = Period.TWO_SECS;
- 
-       } else if (value == "FIVE_MINS"){ period = Period.FIVE_MINS;
-       
-       } else if (value == "TEN_MINS"){ period = Period.TEN_MINS;  
-       } else if (value == "TEN_SECS"){ period = Period.TEN_SECS; 
-       
-       } else if (value == "FIFTEEN_MINS"){ period = Period.FIFTEEN_MINS;
-       
-       } else if (value == "TWENTY_MINS"){ period = Period.TWENTY_MINS;
-       } else if (value == "TWENTY_SECS"){ period = Period.TWENTY_SECS;
-             
-       } else if (value == "THIRTY_MINS"){ period = Period.THIRTY_MINS;
-       } else if (value == "THIRTY_SECS"){ period = Period.THIRTY_SECS;         
-       
-       } else if (value == "FOUR_HOURS"){ period = Period.FOUR_HOURS;
-       } else if (value == "DAILY"){ period = Period.DAILY;
-       } else if (value == "WEEKLY"){ period = Period.WEEKLY;
-       } else if (value == "MONTHLY"){ period = Period.MONTHLY;
-       } else if (value == "INFINITY"){ period = Period.INFINITY;   
-       
-       } else period = Period.TEN_SECS; 
-
-  	
-    	return period;
-    }	
-	
-    protected Instrument setInstrument(String value) {
-    	 
-        if (value == "EURUSD"){ instrument = Instrument.EURUSD;
-        
-        } else if (value == "EURJPY"){ instrument = Instrument.EURJPY;
-        } else if (value == "USDJPY"){ instrument = Instrument.USDJPY;
-        } else if (value == "USDRUB"){ instrument = Instrument.USDRUB;
-        } else if (value == "AUDUSD"){ instrument = Instrument.AUDUSD;   
- 
-        } else instrument = Instrument.EURUSD; 
- 	
-     	return instrument;  
-     }	
- 		
-	
-	
-	
-	
-	
-	
-	
-	
-	
+    private static Calendar myCalendar;
+    static {
+        myCalendar = Calendar.getInstance();
+        myCalendar.set(2012, Calendar.JULY, 17, 14, 30, 00);
+    }
+    
+    @Configurable(value="particular time", description="17th july 14:30")    
+    public Calendar particularTime = myCalendar;
+    
+    @Configurable(value="current time", description="default is current time")
+    public Calendar currentTime = Calendar.getInstance();
+    
+    private static Calendar calTodayAt5am;
+    static {
+        calTodayAt5am = Calendar.getInstance();
+        calTodayAt5am.set(Calendar.HOUR_OF_DAY, 5);
+        calTodayAt5am.set(Calendar.MINUTE, 0);
+        calTodayAt5am.set(Calendar.SECOND, 0);
+    }
+    
+    @Configurable(value="time in millis", description="default is today at 5am", datetimeAsLong=true)    
+    public long timeInMillis = calTodayAt5am.getTimeInMillis();
+		
 	/*
 	 * *******************************************************************************
 	 * */
+    
+    
+    
 
 	@Override
 	public void onStart(IContext context) throws JFException {
@@ -168,25 +138,7 @@ public class merFX_Play implements IStrategy {
     }
     
 	//use of string operations
-	private boolean isValidTime(int fromHour, int fromMin, int toHour, int toMin) throws JFException {			
 
-		boolean result = false;
-		long lastTickTime = history.getLastTick(instrument).getTime();
-		//you want to work with the date of the last tick - in a case you are back-testing
-		String fromStr = gmtSdf.format(lastTickTime).substring(0, 11) + String.valueOf(fromHour)+":"+String.valueOf(fromMin) + ":00";
-		String toStr = gmtSdf.format(lastTickTime).substring(0, 11) + String.valueOf(toHour)+":"+String.valueOf(toMin) + ":00";
-		try {
-			long from = gmtSdf.parse(fromStr).getTime();
-			long to = gmtSdf.parse(toStr).getTime();
-			
-			print(String.format("calendar: %s - %s last tick: %s", gmtSdf.format(from), gmtSdf.format(to), gmtSdf.format(lastTickTime)));
-			result = lastTickTime > from  && lastTickTime < to;			
-		} catch (ParseException e) {
-			e.printStackTrace();
-		}
-		
-		return result;
-	}
 	@Override
     public void onStop() throws JFException {
         for (IOrder order : engine.getOrders()) {
@@ -234,6 +186,12 @@ public class merFX_Play implements IStrategy {
 		//	return;
 
 		print ( "Is valid time? " + isValidTime (10, 0, 18, 0) );
+		
+        if ( instrument == this.instrument){
+            console.getOut().println(" bar: " + period  + " " + askBar);
+        }
+		
+		
     }
 
 	private void print(Object o) {
@@ -315,6 +273,77 @@ public class merFX_Play implements IStrategy {
 
         return prices;
     }
+
+    
+	private boolean isValidTime(int fromHour, int fromMin, int toHour, int toMin) throws JFException {			
+
+		boolean result = false;
+		long lastTickTime = history.getLastTick(instrument).getTime();
+		//you want to work with the date of the last tick - in a case you are back-testing
+		String fromStr = gmtSdf.format(lastTickTime).substring(0, 11) + String.valueOf(fromHour)+":"+String.valueOf(fromMin) + ":00";
+		String toStr = gmtSdf.format(lastTickTime).substring(0, 11) + String.valueOf(toHour)+":"+String.valueOf(toMin) + ":00";
+		try {
+			long from = gmtSdf.parse(fromStr).getTime();
+			long to = gmtSdf.parse(toStr).getTime();
+			
+			print(String.format("calendar: %s - %s last tick: %s", gmtSdf.format(from), gmtSdf.format(to), gmtSdf.format(lastTickTime)));
+			result = lastTickTime > from  && lastTickTime < to;			
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
+		return result;
+	}    
+    
+    protected Period setPeriod(String value) {
+    	 
+        if (value == "TICK"){ period = Period.TICK;
+        
+        } else if (value == "ONE_HOUR"){ period = Period.ONE_HOUR;
+        } else if (value == "ONE_MIN"){ period = Period.ONE_MIN;
+        } else if (value == "ONE_SEC"){ period = Period.ONE_SEC;
+        
+        } else if (value == "TWO_SECS"){ period = Period.TWO_SECS;
+  
+        } else if (value == "FIVE_MINS"){ period = Period.FIVE_MINS;
+        
+        } else if (value == "TEN_MINS"){ period = Period.TEN_MINS;  
+        } else if (value == "TEN_SECS"){ period = Period.TEN_SECS; 
+        
+        } else if (value == "FIFTEEN_MINS"){ period = Period.FIFTEEN_MINS;
+        
+        } else if (value == "TWENTY_MINS"){ period = Period.TWENTY_MINS;
+        } else if (value == "TWENTY_SECS"){ period = Period.TWENTY_SECS;
+              
+        } else if (value == "THIRTY_MINS"){ period = Period.THIRTY_MINS;
+        } else if (value == "THIRTY_SECS"){ period = Period.THIRTY_SECS;         
+        
+        } else if (value == "FOUR_HOURS"){ period = Period.FOUR_HOURS;
+        } else if (value == "DAILY"){ period = Period.DAILY;
+        } else if (value == "WEEKLY"){ period = Period.WEEKLY;
+        } else if (value == "MONTHLY"){ period = Period.MONTHLY;
+        } else if (value == "INFINITY"){ period = Period.INFINITY;   
+        
+        } else period = Period.TEN_SECS; 
+
+   	
+     	return period;
+     }	
+ 	
+     protected Instrument setInstrument(String value) {
+     	 
+         if (value == "EURUSD"){ instrument = Instrument.EURUSD;
+         
+         } else if (value == "EURJPY"){ instrument = Instrument.EURJPY;
+         } else if (value == "USDJPY"){ instrument = Instrument.USDJPY;
+         } else if (value == "USDRUB"){ instrument = Instrument.USDRUB;
+         } else if (value == "AUDUSD"){ instrument = Instrument.AUDUSD;   
+  
+         } else instrument = Instrument.EURUSD; 
+  	
+      	return instrument;  
+      }	
+  		    
 }
 
 

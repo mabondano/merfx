@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 Dukascopy (Suisse) SA. All Rights Reserved.
+ * Copyright (c) 2017 Dukascopy (Suisse) SA. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -35,17 +35,10 @@ import com.dukascopy.api.system.ISystemListener;
 import com.dukascopy.api.system.ITesterClient;
 import com.dukascopy.api.system.ITesterClient.DataLoadingMethod;
 import com.dukascopy.api.system.TesterFactory;
-
 import fxOne.merFXFile;
 import py4j.AdditionApplication;
 import py4j.fxGateway;
 import singlejartest.Main;
-//import strategies.HolyTrinityStrategy;
-//import strategies.OppositeOrder;
-//import strategies.TURBO_trading_GBPUSD10min;
-//import strategies.sto_rc2;
-//import strategies.trailingStop;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,12 +55,13 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.Future;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 /**
  * This small program demonstrates how to initialize Dukascopy tester and start a strategy
  */
-public class merTesterMain {
+public class merTesterMain2 {
     private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
     // merFX
     private static int strategyCounter = 0;
@@ -76,6 +70,9 @@ public class merTesterMain {
     private static String jnlpUrl = "";
     private static String userName = "";
     private static String password = "";
+
+    private static ITesterClient client;
+    private static String reportsFileLocation = "D:\\report.html";
     
     private static String instrumentText = ""; 
     
@@ -84,13 +81,15 @@ public class merTesterMain {
     private static int marginCutLevel = 0;    
     private static String dateFrom = "";    
     private static String dateTo = ""; 
-    
-    //private static PythonCaller pycall = new PythonCaller();
-    
+
+    private static merFXFile fxXML = new merFXFile(); 
     private static fxGateway gateway;
     
+    private static long strategyId1 = 0;
+    
+    //private static PythonCaller pycall = new PythonCaller();    
+    //private static fxGateway gateway = new fxGateway();    
     //private static Optimizer optim = new Optimizer(32,6);
-
     
 	public static void insertStringInFile(File inFile, int lineno, String lineToBeInserted) throws Exception {
 		// temp file
@@ -118,14 +117,40 @@ public class merTesterMain {
 
 		inFile.delete();
 		outFile.renameTo(inFile);
-	}    
-    
+	} 
+
     public static void main(String[] args) throws Exception {
     	
+        //get the instance of the IClient interface
+        client = TesterFactory.getDefaultInstance();
+         
+        readXmlFile();
+        setDataInterval();
+
+        setSystemListener();
+        tryToConnect();
+        subscribeToInstruments();
+        
+        modifyingAccountData();
+        
+        loadData();
+
+        //call python
+        //pycall;
+
+        MA_Play strategy1 = new MA_Play();
+        
+        //start the strategy
+        LOGGER.info("Starting strategy");
+        strategyId1 = client.startStrategy(strategy1, getLoadingProgressListener());
+        //now it's running
+        
+        checkStopByConsole(strategyId1);
+    }
+    
+    private static void readXmlFile() {
     	//read xml file
-    	
-    	final merFXFile fxXML = new merFXFile();
-    	
+     	
     	jnlpUrl = fxXML.jnlpUrl; 
     	userName = fxXML.userName; 
     	password = fxXML.password;
@@ -136,28 +161,24 @@ public class merTesterMain {
     	dateFrom = fxXML.dateFrom; 
     	dateTo = fxXML.dateTo; 
     	
-    	//fxXML.outToConsole();
- 
-        //get the instance of the IClient interface
-        final ITesterClient client = TesterFactory.getDefaultInstance();
-        
+    	//fxXML.outToConsole();    	
+    }
+    
+    private static void setDataInterval() throws ParseException {
+    	
     	final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
     	dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
 
-    	//Date dateFrom = dateFormat.parse("01/03/2017 12:00:00");
-    	//Date dateTo = dateFormat.parse("01/04/2017 00:00:00");
     	Date idateFrom = dateFormat.parse(dateFrom);
     	Date idateTo = dateFormat.parse(dateTo);    	
     	
-    	client.setDataInterval(DataLoadingMethod.ALL_TICKS, idateFrom.getTime(), idateTo.getTime());        
-        
-        //fxGateway gateway = new fxGateway();
-        
-        //final StrategyParams2 strategy1;
-        //set the listener that will receive system events
+    	client.setDataInterval(DataLoadingMethod.ALL_TICKS, idateFrom.getTime(), idateTo.getTime());      	
+    	
+    }
+
+    private static void setSystemListener() {
         client.setSystemListener(new ISystemListener() {
         	private int lightReconnects = 3;
-        	
             @Override
             public void onStart(long processId) {
                 LOGGER.info("Strategy started: " + processId);
@@ -169,8 +190,8 @@ public class merTesterMain {
                 // merFX
                 LOGGER.info("Strategy Counter: " + strategyCounter);
                 // end
-                
-                
+
+                //File reportFile = new File(reportsFileLocation);
                 java.util.Date date = new java.util.Date();
                 //System.out.println(date);                
                 // File reportFile = new File("D:\\workspaces\\neon\\IDE\\JForex-SDK\\logs\\report.html");  "yyMMddHHmmssZ"  "dd.MM.yyyy"
@@ -221,9 +242,10 @@ public class merTesterMain {
                 };
                 new Thread(runnable).start();
             }
-            
         });
+    }
 
+    private static void tryToConnect() throws Exception {
         LOGGER.info("Connecting...");
         //connect to the server using jnlp, user name and password
         //connection is needed for data downloading
@@ -239,56 +261,39 @@ public class merTesterMain {
             LOGGER.error("Failed to connect Dukascopy servers");
             System.exit(1);
         }
+    }
 
+    private static void subscribeToInstruments() {
         //set instruments that will be used in testing
         Set<Instrument> instruments = new HashSet<>();
         instruments.add(Instrument.EURUSD);
         LOGGER.info("Subscribing instruments...");
         client.setSubscribedInstruments(instruments);
-
+    }
+    
+    private static void modifyingAccountData() {
         //setting initial deposit
         client.setInitialDeposit(Instrument.EURUSD.getSecondaryJFCurrency(), initialDeposit);        
         //Modifying account data
         client.setLeverage(leverage);
         client.setMarginCutLevel(marginCutLevel);
-        
+    }    
+
+    private static void loadData() throws InterruptedException, java.util.concurrent.ExecutionException {
         //load data
         LOGGER.info("Downloading data");
         Future<?> future = client.downloadData(null);
         //wait for downloading to complete
         future.get();
-                
-        //call python
-        //pycall;
-        //start the strategy
-        LOGGER.info("Starting strategy");
-        
-        merFX_Play strategy1 = new merFX_Play();
-        merFX_Play strategy2 = new merFX_Play();
-        
-        strategy1.amount = 0.01;
-        strategy1.sl_factor = 20;
-        strategy1.tp_factor = 10;
-        
-        strategy2.amount = 0.02;
-        strategy2.sl_factor = 60;
-        strategy2.tp_factor = 60;        
-        
-        //final long strategyId1 = client.startStrategy(strategy1);
+    }
 
-        
-        final long strategyId2 = client.startStrategy(
-        	//strategy2,
-        	//new merFX_Play(),
-        	new MA_Play(), 
-			new LoadingProgressListener() {
+    private static LoadingProgressListener getLoadingProgressListener() {
+        return new LoadingProgressListener() {
         	@SuppressWarnings("serial")
         	private SimpleDateFormat sdf = new SimpleDateFormat(" MM/dd/yyyy HH:mm:ss,") {{
         	        setTimeZone(TimeZone.getTimeZone("GMT"));
         	}};
-        	private boolean past18 = false;        		
-        		
-        		
+        	private boolean past18 = false;  
             @Override
             public void dataLoaded(long startTime, long endTime, long currentTime, String information) {
             	// merFX
@@ -308,19 +313,18 @@ public class merTesterMain {
             @Override
             public void loadingFinished(boolean allDataLoaded, long startTime, long endTime, long currentTime) {
             }
-            
+
             //stop loading data if it is past 18:00
             @Override
             public boolean stopJob() {
                 return false;
                 //return past18;  //ERROR Main - Report data is not available
             }
-        });
-        //now it's running
-        
-        
-        
-      //every second check if "stop" had been typed in the console - if so - then stop the strategy
+        };
+    }
+    
+    private static void checkStopByConsole(final long strategyId) {
+        //every second check if "stop" had been typed in the console - if so - then stop the strategy
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {                
@@ -330,8 +334,7 @@ public class merTesterMain {
                         String str = s.next();
                         if(str.equalsIgnoreCase("stop")){
                             System.out.println("Strategy stop by console command.");
-                            //client.stopStrategy(strategyId1);
-                            client.stopStrategy(strategyId2);
+                            client.stopStrategy(strategyId);
                             break;
                         }
                     }
@@ -343,8 +346,7 @@ public class merTesterMain {
                 }
             }
             });
-        thread.start();        
-        
-               
-    }
+        thread.start();    	
+    } 
+    
 }
