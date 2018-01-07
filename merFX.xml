@@ -8,13 +8,19 @@
 		<reportfile>report_</reportfile>
 		<instrument>EURUSD</instrument>
 		<initialDeposit>120</initialDeposit>
+		<leverage>80</leverage>
+		<marginCutLevel>150</marginCutLevel>
 		<info>merTesterFX:</info>
 		<pathfile>D:/Development/merAlgoPy/</pathfile> 
 		<csvpathfile>D:/Development/merAlgoPy/</csvpathfile> 
-		<reportpathfile>D:/workspaces/neon/DEV/JForex-3-SDK/logs/</reportpathfile> 
+		<reportpathfile>D:/workspaces/oxygen/JForex-3-SDK/logs/</reportpathfile> 
+		<enableGUI>false</enableGUI>
+		<activeFxOne>false</activeFxOne>
 		<activeDB>false</activeDB>
 		<activeCSV>false</activeCSV>
 		<activeGateway>false</activeGateway>
+		<dateFrom>05/25/2016 12:00:00</dateFrom>
+		<dateTo>05/26/2016 00:00:00</dateTo>
 	</globalsettings>
 	<strategyparams>
 		<intParam>1</intParam>
@@ -28,7 +34,7 @@
 		<period>TEN_SECS</period>
 	</strategyparams>	
 	<iparameters>
-	    <name>ema</name>
+	    <name>stochastic</name>
 		<amount>0.001</amount>
 		<shift>1</shift>
 		<iperiod>14</iperiod>
